@@ -1,0 +1,40 @@
+[gd_scene load_steps=2 format=3 uid="uid://dbogrv7e728q0"]
+
+[ext_resource type="Script" uid="uid://deb434eblcx0a" path="res://ui/level_up_menu.gd" id="1_dubad"]
+
+[node name="CanvasLayer" type="CanvasLayer"]
+script = ExtResource("1_dubad")
+
+[node name="Panel" type="Panel" parent="."]
+clip_contents = true
+offset_left = 598.0
+offset_top = 261.0
+offset_right = 864.0
+offset_bottom = 502.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
+layout_mode = 0
+offset_left = 52.0
+offset_top = 24.0
+offset_right = 217.0
+offset_bottom = 125.0
+
+[node name="Label" type="Label" parent="Panel/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 1
+text = "¡Subiste de nivel!
+
+Elige una mejora"
+
+[node name="BtnFireRate" type="Button" parent="Panel/VBoxContainer"]
+layout_mode = 2
+text = "Cadencia de disparo"
+
+[node name="BtnRange" type="Button" parent="Panel/VBoxContainer"]
+layout_mode = 2
+text = "Rango de detección"
+
+[node name="BtnClose" type="Button" parent="Panel/VBoxContainer"]
+layout_mode = 2
+text = "Continuar"

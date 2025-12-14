@@ -1,46 +1,52 @@
 extends CharacterBody3D
 
-const SPEED := 5.5
+signal leveled_up(level: int)
+
 const BULLET_3D := preload("bullet_3d.tscn")
 
+@export var move_speed: float = 5.5
 @export var auto_fire_enabled: bool = true
 @export var shoot_distance: float = 50.0
-@onready var aim_ray: RayCast3D = $Camera3D/AimRay
 
+# --- XP / NIVEL ---
+var xp: int = 0
+var level: int = 1
+var xp_to_next: int = 5
+
+@onready var cam := get_node_or_null("Camera3D")
+@onready var aim_ray := get_node_or_null("Camera3D/AimRay")
+@onready var marker := get_node_or_null("Camera3D/Marker3D")
+@onready var shot_timer := get_node_or_null("Timer")
+@onready var shoot_audio := get_node_or_null("AudioStreamPlayer")
 
 func _ready():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
-	# Configuración del RayCast (AimRay)
-	$Camera3D/AimRay.enabled = true
-	$Camera3D/AimRay.target_position = Vector3(0, 0, -shoot_distance)
-
+	# Config del AimRay
+	if aim_ray:
+		aim_ray.enabled = true
+		aim_ray.target_position = Vector3(0, 0, -shoot_distance)
+	else:
+		push_error(" No se encontró AimRay en Camera3D/AimRay")
 
 func _unhandled_input(event):
-	if event is InputEventMouseMotion:
+	if event is InputEventMouseMotion and cam:
 		rotation_degrees.y -= event.relative.x * 0.5
-		$Camera3D.rotation_degrees.x -= event.relative.y * 0.2
-		$Camera3D.rotation_degrees.x = clamp(
-			$Camera3D.rotation_degrees.x, -60.0, 60.0
-		)
+		cam.rotation_degrees.x -= event.relative.y * 0.2
+		cam.rotation_degrees.x = clamp(cam.rotation_degrees.x, -60.0, 60.0)
 	elif event.is_action_pressed("ui_cancel"):
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 
-
 func _physics_process(delta):
 	# --- Movimiento ---
-	var input_direction_2D = Input.get_vector(
-		"move_left", "move_right", "move_forward", "move_back"
-	)
-	var input_direction_3D = Vector3(
-		input_direction_2D.x, 0, input_direction_2D.y
-	)
-	var direction = transform.basis * input_direction_3D
+	var input_dir_2d = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	var input_dir_3d = Vector3(input_dir_2d.x, 0, input_dir_2d.y)
+	var dir = transform.basis * input_dir_3d
 
-	velocity.x = direction.x * SPEED
-	velocity.z = direction.z * SPEED
+	velocity.x = dir.x * move_speed
+	velocity.z = dir.z * move_speed
 
-	# --- Gravedad / salto ---
+	# --- gravedad / salto ---
 	velocity.y -= 20.0 * delta
 	if Input.is_action_just_pressed("jump") and is_on_floor():
 		velocity.y = 10.0
@@ -49,41 +55,67 @@ func _physics_process(delta):
 
 	move_and_slide()
 
-	# --- DISPARO AUTOMÁTICO SOLO SI HAY MOB EN LA MIRA ---
-	if auto_fire_enabled and $Timer.is_stopped():
+	# --- Disparo automático (solo si hay mob en la mira) ---
+	if auto_fire_enabled and shot_timer and shot_timer.is_stopped():
 		if is_mob_in_crosshair():
 			shoot_bullet()
 
-
 func is_mob_in_crosshair() -> bool:
-	var ray := $Camera3D/AimRay
-	ray.force_raycast_update()
-
-	if not ray.is_colliding():
+	if aim_ray == null:
 		return false
 
-	var collider = ray.get_collider()
+	aim_ray.target_position = Vector3(0, 0, -shoot_distance)
+	aim_ray.force_raycast_update()
+
+	if not aim_ray.is_colliding():
+		return false
+
+	var collider = aim_ray.get_collider()
 	if collider == null:
 		return false
 
-	# Caso 1: el collider es el Mob directamente
+	# Mob si tiene take_damage (o su padre)
 	if collider.has_method("take_damage"):
 		return true
-
-	# Caso 2: el collider es un hijo (CollisionShape3D)
-	var parent = collider.get_parent()
-	if parent != null and parent.has_method("take_damage"):
-		return true
-
-	return false
-
+	var p = collider.get_parent()
+	return p != null and p.has_method("take_damage")
 
 func shoot_bullet():
-	var new_bullet = BULLET_3D.instantiate()
+	if marker == null:
+		return
 
-	# Marker3D está dentro de Camera3D
-	$Camera3D/Marker3D.add_child(new_bullet)
-	new_bullet.global_transform = $Camera3D/Marker3D.global_transform
+	var bullet = BULLET_3D.instantiate()
+	marker.add_child(bullet)
+	bullet.global_transform = marker.global_transform
 
-	$Timer.start()
-	$AudioStreamPlayer.play()
+	if shot_timer:
+		shot_timer.start()
+	if shoot_audio:
+		shoot_audio.play()
+
+# -----------------------
+# XP / LEVEL SYSTEM
+# -----------------------
+func add_xp(amount: int) -> void:
+	xp += amount
+
+	while xp >= xp_to_next:
+		xp -= xp_to_next
+		level += 1
+		xp_to_next = int(ceil(float(xp_to_next) * 1.6))
+		print("Subiste a nivel:", level, " | siguiente:", xp_to_next)
+		emit_signal("leveled_up", level)
+
+# -----------------------
+# UPGRADES (para el menú)
+# -----------------------
+func upgrade_fire_rate() -> void:
+	if shot_timer:
+		shot_timer.wait_time = max(0.05, shot_timer.wait_time * 0.85)
+		print("FireRate upgrade. Nuevo wait_time:", shot_timer.wait_time)
+
+func upgrade_range() -> void:
+	shoot_distance = min(150.0, shoot_distance + 15.0)
+	if aim_ray:
+		aim_ray.target_position = Vector3(0, 0, -shoot_distance)
+	print(" Range upgrade. Nuevo rango:", shoot_distance)

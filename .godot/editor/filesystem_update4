@@ -4,3 +4,9 @@ res://lessons_reference/video_16/game.gd
 res://lessons_reference/video_16/mob/mob.gd
 res://lessons_reference/video_16/player/player.tscn
 res://lessons_reference/video_16/game.tscn
+res://ui/level_up_menu.tscn
+res://ui/level_up_menu.gd
+res://PauseMenu.tscn
+res://pause_menu.gd
+res://ui/PauseMenu.tscn
+res://ui/pause_menu.gd
