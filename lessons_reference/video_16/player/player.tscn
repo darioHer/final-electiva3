@@ -30,6 +30,9 @@ unique_name_in_owner = true
 transform = Transform3D(0.42952, 0, 0, 0, 0.42952, 0, 0, 0, 0.42952, 0.364214, -0.0933893, -0.624222)
 gizmo_extents = 0.37
 
+[node name="AimRay" type="RayCast3D" parent="Camera3D"]
+target_position = Vector3(0, -1, -100)
+
 [node name="Timer" type="Timer" parent="."]
 unique_name_in_owner = true
 process_callback = 0

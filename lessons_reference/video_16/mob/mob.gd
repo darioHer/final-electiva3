@@ -14,7 +14,8 @@ var health = 3
 @onready var ko_sound = %KOSound
 
 
-func _physics_process(delta):
+func _physics_process(_delta):
+
 	var direction = global_position.direction_to(player.global_position)
 	direction.y = 0.0
 	linear_velocity = direction * speed
@@ -37,7 +38,9 @@ func take_damage():
 		gravity_scale = 1.0
 		var direction = player.global_position.direction_to(global_position)
 		var random_upward_force = Vector3.UP * randf() * 5.0
-		apply_central_impulse(direction.rotated(Vector3.UP, randf_range(-0.2, 0.2)) * 10.0 + random_upward_force)
+		apply_central_impulse(
+			direction.rotated(Vector3.UP, randf_range(-0.2, 0.2)) * 10.0 + random_upward_force
+		)
 
 		timer.start()
 
