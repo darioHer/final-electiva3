@@ -7,18 +7,31 @@ var player_score = 0
 
 const LEVEL_UP_MENU = preload("res://ui/level_up_menu.tscn")
 const PAUSE_MENU = preload("res://ui/PauseMenu.tscn")
+const HUD_SCN = preload("res://ui/hud.tscn")
 
+var hud: Node = null
 var pause_menu_open := false
 var level_menu_open := false
+
 
 func _ready():
 	update_hud()
 
 	if player:
+
 		if not player.leveled_up.is_connected(_on_player_leveled_up):
 			player.leveled_up.connect(_on_player_leveled_up)
+
+		hud = HUD_SCN.instantiate()
+		hud.process_mode = Node.PROCESS_MODE_ALWAYS
+		add_child(hud)
+
+		if hud.has_method("bind_player"):
+			hud.bind_player(player)
 	else:
-		push_error("❌ No se encontró nodo Player dentro de Game")
+		push_error("No se encontró nodo Player dentro de Game")
+
+
 
 func increase_score():
 	player_score += 1
@@ -31,12 +44,22 @@ func _on_kill_plane_body_entered(_body):
 	get_tree().reload_current_scene.call_deferred()
 
 func _on_mob_spawner_3d_mob_spawned(mob):
+	if not mob.has_signal("died"):
+		push_error(" El mob no tiene signal 'died'")
+		return
+
 	mob.died.connect(func():
 		increase_score()
 		do_poof(mob.global_position)
+
+		var xp_gain := 1
+		if mob.get("xp_reward") != null:
+			xp_gain = int(mob.xp_reward)
+
 		if player:
-			player.add_xp(1)
+			player.add_xp(xp_gain)
 	)
+
 
 func _on_player_leveled_up(_level: int):
 	if level_menu_open:
@@ -55,6 +78,7 @@ func _on_player_leveled_up(_level: int):
 	menu.tree_exited.connect(func():
 		level_menu_open = false
 	)
+
 
 func _unhandled_input(event):
 	if event.is_action_pressed("ui_cancel"):

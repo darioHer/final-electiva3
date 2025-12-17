@@ -1,6 +1,7 @@
 extends CharacterBody3D
 
 signal leveled_up(level: int)
+signal xp_changed(xp: int, xp_to_next: int, level: int)
 
 const BULLET_3D := preload("bullet_3d.tscn")
 
@@ -8,7 +9,7 @@ const BULLET_3D := preload("bullet_3d.tscn")
 @export var auto_fire_enabled: bool = true
 @export var shoot_distance: float = 50.0
 
-# --- XP / NIVEL ---
+# --- XP 
 var xp: int = 0
 var level: int = 1
 var xp_to_next: int = 5
@@ -19,15 +20,19 @@ var xp_to_next: int = 5
 @onready var shot_timer := get_node_or_null("Timer")
 @onready var shoot_audio := get_node_or_null("AudioStreamPlayer")
 
+
 func _ready():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
-	# Config del AimRay
 	if aim_ray:
 		aim_ray.enabled = true
 		aim_ray.target_position = Vector3(0, 0, -shoot_distance)
 	else:
-		push_error(" No se encontró AimRay en Camera3D/AimRay")
+		push_error("No se encontró AimRay en Camera3D/AimRay")
+
+
+	emit_signal("xp_changed", xp, xp_to_next, level)
+
 
 func _unhandled_input(event):
 	if event is InputEventMouseMotion and cam:
@@ -36,6 +41,7 @@ func _unhandled_input(event):
 		cam.rotation_degrees.x = clamp(cam.rotation_degrees.x, -60.0, 60.0)
 	elif event.is_action_pressed("ui_cancel"):
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+
 
 func _physics_process(delta):
 	# --- Movimiento ---
@@ -46,7 +52,6 @@ func _physics_process(delta):
 	velocity.x = dir.x * move_speed
 	velocity.z = dir.z * move_speed
 
-	# --- gravedad / salto ---
 	velocity.y -= 20.0 * delta
 	if Input.is_action_just_pressed("jump") and is_on_floor():
 		velocity.y = 10.0
@@ -55,10 +60,11 @@ func _physics_process(delta):
 
 	move_and_slide()
 
-	# --- Disparo automático (solo si hay mob en la mira) ---
+	# --- Disparo automático (si hay mob en la mira) ---
 	if auto_fire_enabled and shot_timer and shot_timer.is_stopped():
 		if is_mob_in_crosshair():
 			shoot_bullet()
+
 
 func is_mob_in_crosshair() -> bool:
 	if aim_ray == null:
@@ -74,11 +80,12 @@ func is_mob_in_crosshair() -> bool:
 	if collider == null:
 		return false
 
-	# Mob si tiene take_damage (o su padre)
 	if collider.has_method("take_damage"):
 		return true
+
 	var p = collider.get_parent()
 	return p != null and p.has_method("take_damage")
+
 
 func shoot_bullet():
 	if marker == null:
@@ -93,22 +100,33 @@ func shoot_bullet():
 	if shoot_audio:
 		shoot_audio.play()
 
-# -----------------------
-# XP / LEVEL SYSTEM
-# -----------------------
+
 func add_xp(amount: int) -> void:
 	xp += amount
+
+	#  actualizar HUD inmediatamente
+	emit_signal("xp_changed", xp, xp_to_next, level)
 
 	while xp >= xp_to_next:
 		xp -= xp_to_next
 		level += 1
 		xp_to_next = int(ceil(float(xp_to_next) * 1.6))
-		print("Subiste a nivel:", level, " | siguiente:", xp_to_next)
-		emit_signal("leveled_up", level)
 
-# -----------------------
-# UPGRADES (para el menú)
-# -----------------------
+		print("Subiste a nivel:", level, " | siguiente:", xp_to_next)
+
+		emit_signal("leveled_up", level)
+		emit_signal("xp_changed", xp, xp_to_next, level)
+
+
+func get_xp_state() -> Dictionary:
+	return {
+		"xp": xp,
+		"xp_to_next": xp_to_next,
+		"level": level
+	}
+
+
+
 func upgrade_fire_rate() -> void:
 	if shot_timer:
 		shot_timer.wait_time = max(0.05, shot_timer.wait_time * 0.85)

@@ -1,0 +1,38 @@
+[gd_scene load_steps=6 format=3 uid="uid://lhlrkan64ecj"]
+
+[ext_resource type="Script" uid="uid://ncen0e7ndjfy" path="res://lessons_reference/video_16/mob/mob_tank.gd" id="1_sosbx"]
+[ext_resource type="PackedScene" uid="uid://12e7gwo50sef" path="res://lessons_reference/video_16/mob/bat/bat_model.tscn" id="2_gd07k"]
+[ext_resource type="AudioStream" uid="uid://bec5opkuf77c7" path="res://mob/mob_take_damage.wav" id="3_7g2rc"]
+[ext_resource type="AudioStream" uid="uid://ha0bp3cygkq1" path="res://mob/mob_ko.wav" id="4_beb15"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_gkbwe"]
+
+[node name="Mob" type="RigidBody3D"]
+top_level = true
+gravity_scale = 0.0
+script = ExtResource("1_sosbx")
+
+[node name="bat_model" parent="." instance=ExtResource("2_gd07k")]
+unique_name_in_owner = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="bat_model"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("SphereShape3D_gkbwe")
+
+[node name="Timer" type="Timer" parent="."]
+unique_name_in_owner = true
+one_shot = true
+
+[node name="HurtSound" type="AudioStreamPlayer3D" parent="."]
+unique_name_in_owner = true
+stream = ExtResource("3_7g2rc")
+max_db = -10.0
+max_polyphony = 4
+
+[node name="KOSound" type="AudioStreamPlayer3D" parent="."]
+unique_name_in_owner = true
+stream = ExtResource("4_beb15")
+max_db = -10.0
+
+[connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]
